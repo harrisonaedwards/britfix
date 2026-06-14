@@ -72,7 +72,18 @@ def load_config():
         log("[Britfix Error] Config missing 'strategies' object")
         sys.exit(1)
 
-    config['exclude_paths'] = clean_exclude_paths(config.get('exclude_paths', []))
+    # LOCAL-ONLY (not in the upstream PR): merge a gitignored config.local.json so
+    # personal exclude_paths stay out of git. exclude_paths only — no strategies override
+    # (the engine reads only config.json, so a local strategies override would not take effect).
+    raw = config.get('exclude_paths', [])
+    local_path = HOOK_DIR / 'config.local.json'
+    if local_path.exists():
+        try:
+            with open(local_path) as f:
+                raw = raw + json.load(f).get('exclude_paths', [])
+        except json.JSONDecodeError as e:
+            log(f"[Britfix] Invalid JSON in config.local.json: {e}")
+    config['exclude_paths'] = clean_exclude_paths(raw)
 
     return config
 
