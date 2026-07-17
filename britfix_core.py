@@ -516,23 +516,34 @@ class MarkdownStrategy(FileProcessingStrategy):
                 # Split on HTML tags so attribute values aren't corrected
                 # Require tag-like structure: < then letter or / to avoid matching bare < in prose
                 tag_pattern = r'(</?[a-zA-Z][^>]*>)'
-                # Split on markdown link targets `](url)` (optional title inside) so
-                # URLs aren't corrected. Matches `](...)` where `...` has no `)`.
-                # Preserves the `](url)` / `](url "title")` span; the preceding `[text`
-                # stays in prose so link text is still corrected.
-                link_target_pattern = r'(\]\([^)]*\))'
+                # Split on spans that must stay verbatim:
+                #   `](url)` / `](url "title")` — markdown link targets, so URLs
+                #     aren't corrected. Matches `](...)` where `...` has no `)`.
+                #     The preceding `[text` stays in prose so link text is still
+                #     corrected.
+                #   `*"..."*` / `_"..."_` — italicised quote spans, so quoted text
+                #     stays verbatim (same rationale as blockquotes). Straight and
+                #     curly double quotes both count.
+                # Only spans lying wholly within one segment are preserved: one
+                # containing a backtick, or straddling a line-leading code or
+                # blockquote marker, is split by the scan above and won't match.
+                preserve_pattern = (
+                    r'(\]\([^)]*\)'
+                    r'|\*["“][^"“”]*["”]\*'
+                    r'|_["“][^"“”]*["”]_)'
+                )
                 parts = re.split(tag_pattern, segment)
                 for idx, part in enumerate(parts):
                     if idx % 2 == 0:  # Text outside tags
-                        link_parts = re.split(link_target_pattern, part)
-                        for lidx, lpart in enumerate(link_parts):
-                            if lidx % 2 == 0:  # Prose around link targets
-                                corrected, changes = corrector.correct_text(lpart)
+                        preserve_parts = re.split(preserve_pattern, part)
+                        for pidx, ppart in enumerate(preserve_parts):
+                            if pidx % 2 == 0:  # Prose around preserved spans
+                                corrected, changes = corrector.correct_text(ppart)
                                 result.append(corrected)
                                 for word, count in changes.items():
                                     total_changes[word] += count
-                            else:  # Link target `](url)` — preserve unchanged
-                                result.append(lpart)
+                            else:  # Link target or italic quote — preserve unchanged
+                                result.append(ppart)
                     else:  # HTML tag — preserve unchanged
                         result.append(part)
 

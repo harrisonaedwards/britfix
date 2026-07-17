@@ -624,6 +624,79 @@ More color."""
         assert 'href="https://example.com/organized"' in result
         assert "for colour" in result
 
+    # === ITALICISED QUOTE SPANS ===
+
+    def test_italic_quote_span_preserved(self, strategy, corrector):
+        """An italicised quote span should be preserved verbatim (quoted text is verbatim)."""
+        text = 'Authors: *"The organization analyzed its behavior."*'
+        result, changes = strategy.process(text, corrector)
+        assert result == text, f"Italic quote span was modified: {result}"
+
+    def test_italic_quote_span_preserved_prose_converted(self, strategy, corrector):
+        """Prose around an italicised quote span should still be converted."""
+        text = 'Before color. *"They analyzed the behavior."* After color.'
+        result, changes = strategy.process(text, corrector)
+        assert '*"They analyzed the behavior."*' in result
+        assert "Before colour." in result
+        assert "After colour." in result
+
+    def test_underscore_italic_quote_span_preserved(self, strategy, corrector):
+        """Underscore-delimited italic quote spans are preserved too."""
+        text = 'Quote: _"The organization analyzed its behavior."_ and color.'
+        result, changes = strategy.process(text, corrector)
+        assert '_"The organization analyzed its behavior."_' in result
+        assert "and colour." in result
+
+    def test_curly_quote_italic_span_preserved(self, strategy, corrector):
+        """Curly (smart) double quotes inside an italic span are preserved."""
+        text = 'Authors: *“The organization analyzed its behavior.”* and color.'
+        result, changes = strategy.process(text, corrector)
+        assert '*“The organization analyzed its behavior.”*' in result
+        assert "and colour." in result
+
+    def test_bold_quote_span_preserved(self, strategy, corrector):
+        """A bold-wrapped quote span is preserved (inner *"..."* matches)."""
+        text = 'Authors: **"They analyzed the behavior."** and color.'
+        result, changes = strategy.process(text, corrector)
+        assert '"They analyzed the behavior."' in result
+        assert "and colour." in result
+
+    def test_plain_italic_emphasis_still_converted(self, strategy, corrector):
+        """Italic emphasis without quotes is prose, not a quote — it must still be corrected."""
+        text = 'This is *really important behavior* to note.'
+        result, changes = strategy.process(text, corrector)
+        assert "*really important behaviour*" in result, \
+            f"Plain italic emphasis was wrongly preserved: {result}"
+
+    def test_unitalicised_quote_still_converted(self, strategy, corrector):
+        """A bare double-quoted span without italics is not treated as a quote span."""
+        text = 'He called it "behavior" today.'
+        result, changes = strategy.process(text, corrector)
+        assert '"behaviour"' in result, \
+            f"Bare quoted span was wrongly preserved: {result}"
+
+    def test_italic_quote_span_with_link_inside_preserved(self, strategy, corrector):
+        """A link inside an italic quote span is subsumed by the quote span."""
+        text = 'Note *"see [x](https://example.com/organized) now"* and color.'
+        result, changes = strategy.process(text, corrector)
+        assert '*"see [x](https://example.com/organized) now"*' in result
+        assert "and colour." in result
+
+    def test_link_target_still_preserved_alongside_quote_span(self, strategy, corrector):
+        """Link targets keep working when a quote span follows in the same segment."""
+        text = '[a](https://example.com/organized) then *"the behavior"* then color.'
+        result, changes = strategy.process(text, corrector)
+        assert "(https://example.com/organized)" in result
+        assert '*"the behavior"*' in result
+        assert "then colour." in result
+
+    def test_italic_quote_span_with_backtick_not_preserved(self, strategy, corrector):
+        """Documented limitation: a backtick splits the segment, so the span won't match."""
+        text = 'Authors: *"the `x` behavior"* and color.'
+        result, changes = strategy.process(text, corrector)
+        assert "`x`" in result  # Inline code still preserved
+        assert "and colour." in result
+
     def test_wikipedia_style_url_with_nested_parens_preserved(self, strategy, corrector):
         """A wiki-style URL with a single nested `(…)` preserves correctly.
 

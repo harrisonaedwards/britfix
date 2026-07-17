@@ -57,7 +57,7 @@ Different file types are handled by different strategies, configured in `config.
 | Strategy | Extensions | Behaviour |
 |----------|------------|-----------|
 | **text** | `.txt` | Convert everything |
-| **markdown** | `.md`, `.markdown`, `.mdown`, `.mkd`, `.mdx` | Preserve code spans and code blocks |
+| **markdown** | `.md`, `.markdown`, `.mdown`, `.mkd`, `.mdx` | Preserve code spans and blocks, link targets, and quoted text (blockquote lines, `*"..."*` spans) |
 | **latex** | `.tex` | Skip LaTeX commands and math |
 | **html** | `.html`, `.htm`, `.xml` | Skip HTML tags and `<style>`/`<script>` content |
 | **css** | `.css`, `.scss`, `.sass`, `.less` | Only convert comments |
